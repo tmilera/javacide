@@ -11,13 +11,13 @@ public class javacideMain extends ApplicationAdapter {
     private Texture image;
 
     @Override
-    public void create() {
+    public void create() { //on app start
         batch = new SpriteBatch();
         image = new Texture("libgdx.png");
     }
 
     @Override
-    public void render() {
+    public void render() { //update() per frame
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
         batch.begin();
         batch.draw(image, 140, 210);
@@ -25,7 +25,7 @@ public class javacideMain extends ApplicationAdapter {
     }
 
     @Override
-    public void dispose() {
+    public void dispose() { //on app end
         batch.dispose();
         image.dispose();
     }
