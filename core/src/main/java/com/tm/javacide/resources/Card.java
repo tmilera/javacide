@@ -3,6 +3,7 @@ package com.tm.javacide.resources;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.tm.javacide.resources.Deck.DeckType;
 
 /*	CARD PARADIGM:
@@ -40,12 +41,16 @@ public class Card {
 	private boolean flipped;
 	private boolean clicked;
 	
+	// positions
+	private int x;
+	private int y;
+	
 	// object variables
 	private Texture texture;
 	
 	private static final CardSuit[] suitValues = CardSuit.values();
 	
-	Card(Deck parentDeck) {
+	public Card(Deck parentDeck, int x, int y, Texture texture) {
 		// auto creator
 		this.parentDeck = parentDeck;
 		this.suit = suitValues[generateValue(0,3)];
@@ -54,6 +59,10 @@ public class Card {
 		this.flippable = true;
 		this.flipped = false;
 		this.clicked = false;
+		this.texture = texture;
+		
+		this.x = x;
+		this.y = y;
 		
 		if (parentDeck.getDeckType()==DeckType.PLAYERDECK) {
 			// card from the player's deck the player is supposed to use
@@ -64,7 +73,7 @@ public class Card {
 		}
 	}
 	
-	Card(Deck parentDeck, CardSuit suit, int value, boolean clickable, boolean draggable, boolean flippable, boolean flipped, boolean clicked, Texture texture) {
+	public Card(Deck parentDeck, CardSuit suit, int value, boolean clickable, boolean draggable, boolean flippable, boolean flipped, boolean clicked, Texture texture, int x, int y) {
 		// manual creation
 		this.parentDeck = parentDeck;
 		this.suit = suit;
@@ -75,9 +84,21 @@ public class Card {
 		this.clicked = clicked;
 		this.texture = texture;
 		this.value = value;
+		
+		this.x = x;
+		this.y = y;
 	}
 	
 	private int generateValue(int low, int high) {
 		return ThreadLocalRandom.current().nextInt(low,high);
+	}
+	
+	public void render(SpriteBatch batch) {
+		// recall, 0,0 here is position, not scale
+		batch.draw(texture, 0, 0);
+	}
+	
+	public void dispose() {
+		texture.dispose();
 	}
 }
