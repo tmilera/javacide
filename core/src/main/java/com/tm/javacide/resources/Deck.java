@@ -1,7 +1,10 @@
 package com.tm.javacide.resources;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.tm.javacide.javacideMain;
 
 public class Deck {
 	public enum DeckType {
@@ -17,6 +20,8 @@ public class Deck {
 	private int y;
 	
 	private Texture texture;
+	
+	private ArrayList<Card> deckCards = new ArrayList<>();
 	
 	public Deck(DeckType deckType, int x, int y, Texture texture) {
 		// usual constructor
@@ -47,11 +52,24 @@ public class Deck {
 		return this.deckType;
 	}
 	
-	public void render(SpriteBatch batch) {
-		batch.draw(texture, 100, 100);
+	public void render(SpriteBatch batch) { // renders deck texture
+		batch.draw(texture, 0, 0, javacideMain.deckX,javacideMain.deckY);
+		
+		for (Card c : deckCards) { // renders through every card that exists in it's deck
+			c.render(batch);
+		}
 	}
 	
 	public void dispose() {
 		texture.dispose();
+		
+		for (Card c : deckCards) { // renders through every card that exists in it's deck
+			c.dispose();
+		}
+	}
+	
+	public void spawnCard(int x, int y) { // spawn card add to deck
+		Card newCard = new Card(this, x, y, javacideMain.deckTexture);
+		deckCards.add(newCard);
 	}
 }

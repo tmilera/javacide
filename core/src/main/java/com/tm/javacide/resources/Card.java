@@ -4,6 +4,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.tm.javacide.javacideMain;
 import com.tm.javacide.resources.Deck.DeckType;
 
 /*	CARD PARADIGM:
@@ -29,7 +30,7 @@ public class Card {
 	
 	// definer variables
 	final int value;
-	final CardSuit suit;
+	private CardSuit suit;
 	final Deck parentDeck;
 	
 	// action variables
@@ -95,10 +96,16 @@ public class Card {
 	
 	public void render(SpriteBatch batch) {
 		// recall, 0,0 here is position, not scale
-		batch.draw(texture, 0, 0);
+		batch.draw(javacideMain.cardTexture, 0, 0, javacideMain.cardX, javacideMain.cardY);
 	}
 	
-	public void dispose() {
+	public void dispose() { 
 		texture.dispose();
 	}
+	
+	/*
+	 * public void create() {
+		
+	   }
+	*/
 }
