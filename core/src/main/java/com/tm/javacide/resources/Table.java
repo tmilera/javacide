@@ -49,6 +49,9 @@ public class Table {
 	public void setInteractable(boolean val) { this.isInteractable = val; }
 	public void setOrganized(boolean val)    { this.isOrganized = val; }
 	public boolean isInteractable()          { return isInteractable; }
+	
+	public float getX() { return x; }
+	public float getY() { return y; }
 
 	public Rectangle getBounds()    { return bounds; }
 	public int getRemainingSpace() { return Math.max(0, javacideMain.tableMaxCards - capturedCards.size()); }
@@ -60,9 +63,15 @@ public class Table {
 		for (Card card : allCards) {
 			if (card.containedBy == this) continue;
 			if (card.containedBy != null) continue;
+			
+			// FIX: Do not scoop up the card while it is flying. 
+			// Wait for it to arrive and stop moving first.
+			if (card.isAutoMoving()) continue;
+
 			if (cardOverlaps(card) && isSuitAllowed(card.getSuit())
 					&& (capturedCards.size() + pendingCapture.size()) < javacideMain.tableMaxCards) {
 				pendingCapture.add(card);
+				card.containedBy = this; 
 			}
 		}
 		for (Card card : capturedCards) {
@@ -70,7 +79,6 @@ public class Table {
 		}
 		for (Card card : pendingCapture) {
 			capturedCards.add(card);
-			card.containedBy = this;
 		}
 		for (Card card : pendingRelease) {
 			capturedCards.remove(card);
@@ -94,7 +102,7 @@ public class Table {
 	}
 
 	public boolean isSuitAllowed(CardSuit suit) {
-		if (suit == CardSuit.NONE) return false; // Prevent info card capture
+		if (suit == CardSuit.NONE) return false; 
 		if (restrictedSuit == null) return true;
 		return isExclusionary ? (suit != restrictedSuit) : (suit == restrictedSuit);
 	}

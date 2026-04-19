@@ -17,6 +17,7 @@ import com.tm.javacide.resources.Deck;
 import com.tm.javacide.resources.Deck.DeckType;
 import com.tm.javacide.resources.Table;
 import com.tm.javacide.resources.Table.TableType;
+import java.util.List;
  
 public class javacideMain extends ApplicationAdapter {
  
@@ -82,7 +83,6 @@ public class javacideMain extends ApplicationAdapter {
 		font.setColor(Color.WHITE);
 		font.getData().setScale(0.8f);
  
-		// Positioning calculations
 		int tableCenterX = (WORLD_WIDTH - tableX) / 2;
 		int totalStackHeight = 3 * tableY + 2 * TABLE_GAP;
 		int stackBottomY     = (WORLD_HEIGHT - totalStackHeight) / 2;
@@ -91,30 +91,24 @@ public class javacideMain extends ApplicationAdapter {
 		int playerClubsTableY = stackBottomY + tableY + TABLE_GAP;
 		int enemyTableY       = stackBottomY + 2 * (tableY + TABLE_GAP);
  
-		// FIX: Correctly assigning the deck position
 		int deckX_pos = tableCenterX - deckX - DECK_GAP;
  
-		// Tables
 		playerTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, true, tableCenterX, playerTableY, tableTexture);
 		playerClubsTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, false, tableCenterX, playerClubsTableY, tableTexture);
 		playerClubsTable.setInteractable(false);
 		playerClubsTable.setOrganized(true);
 		enemyTable = new Table(TableType.ENEMYTABLE, null, false, tableCenterX, enemyTableY, tableTexture);
 		
-		// Buttons
-		
 		float autoDrawW = tableX / 4f;
 		float autoDrawH = tableY / 4f;
 		float autoDrawX = tableCenterX + (tableX / 2f) - (autoDrawW / 2f);
-		float autoDrawY = playerTableY - autoDrawH - 15f; // Placed beneath playerTable
+		float autoDrawY = playerTableY - autoDrawH - 15f; 
 		
 		autoDrawButton = new Button(ButtonType.BUTTON, autoDrawX, autoDrawY, autoDrawW, autoDrawH, "AUTO-DRAW");
  
-		// Decks
 		playerDeck = new Deck(DeckType.PLAYERDECK, deckX_pos, playerTableY, deckTexture);
 		enemyDeck  = new Deck(DeckType.ENEMYDECK,  deckX_pos, enemyTableY,  enemyDeckTexture);
 
-		// Info Card
 		info = new Card(50, 50, infoX, infoY, infoTexture, CardSuit.NONE);
 	}
  
@@ -137,7 +131,6 @@ public class javacideMain extends ApplicationAdapter {
 		playerDeck.render(batch);
 		enemyDeck.render(batch);
 		
-	
 		autoDrawButton.render(batch);
 
 		info.render(batch); 
@@ -147,9 +140,38 @@ public class javacideMain extends ApplicationAdapter {
 		playerClubsTable.update(playerDeck.getCards());
 		enemyTable.update(enemyDeck.getCards());
 
-		// Logic for button interaction
 		if(autoDrawButton.isClicked()) {
-			// Logic for auto-drawing cards could go here
+			handleAutoDraw();
+		}
+	}
+
+	private void handleAutoDraw() {
+		while (playerDeck.getCards().size() < javacideMain.tableMaxCards) {
+			playerDeck.spawnCard(playerDeck.getX(), playerDeck.getY());
+		}
+
+		List<Card> cards = playerDeck.getCards();
+		for (Card card : cards) {
+			if (card.containedBy != null) continue;
+
+			Table targetTable = null;
+			
+			if (playerClubsTable.isSuitAllowed(card.getSuit())) {
+				targetTable = playerClubsTable;
+			} else if (playerTable.isSuitAllowed(card.getSuit())) {
+				targetTable = playerTable;
+			}
+
+			if (targetTable != null) {
+				// FIX: Added random visual offset so flying cards don't perfectly eclipse each other
+				float randomOffsetX = (float) (Math.random() * 60 - 30);
+				float randomOffsetY = (float) (Math.random() * 60 - 30);
+				
+				card.setAutoTarget(
+					targetTable.getX() + (tableX / 2f) - (cardX / 2f) + randomOffsetX, 
+					targetTable.getY() + (tableY / 2f) - (cardY / 2f) + randomOffsetY
+				);
+			}
 		}
 	}
  
@@ -168,7 +190,6 @@ public class javacideMain extends ApplicationAdapter {
 		buttonTexture.dispose();
 		font.dispose(); 
 		info.dispose();
-		
 		autoDrawButton.dispose();
 	}
 }

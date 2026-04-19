@@ -33,7 +33,7 @@ public class Card {
 	final int value;
 	private CardSuit suit;
 	final Deck parentDeck;
-	Table containedBy = null;
+	public Table containedBy = null;
 
 	public CardSuit getSuit() { return suit; }
 	public float getX()      { return x; }
@@ -44,6 +44,7 @@ public class Card {
 		this.y = ny;
 		this.velocityX = 0;
 		this.velocityY = 0;
+		this.isAutoMoving = false; 
 	}
 
 	private boolean clickable, draggable;
@@ -56,6 +57,14 @@ public class Card {
 	private static final float MAX_LEAN = 15f;
 	private static final float LEAN_SENSITIVITY = 0.015f;
 	private static final float SMOOTH_SPEED = 6f;
+
+	// AUTO MOVE VARIABLES
+	private float targetX, targetY;
+	private boolean isAutoMoving = false;
+	private static final float MOVE_SPEED = 5f;
+
+	// FIX: Added getter so tables know if the card is currently flying
+	public boolean isAutoMoving() { return isAutoMoving; }
 
 	public Card(Deck parentDeck, int x, int y, Texture ignoredDefaultTexture) {
 		this.parentDeck = parentDeck;
@@ -89,6 +98,12 @@ public class Card {
 		this.texture    = texture;
 	}
 
+	public void setAutoTarget(float tx, float ty) {
+		this.targetX = tx;
+		this.targetY = ty;
+		this.isAutoMoving = true;
+	}
+
 	public void update() {
 		boolean interactable = (containedBy == null || containedBy.isInteractable());
 		float dt = Gdx.graphics.getDeltaTime();
@@ -102,6 +117,7 @@ public class Card {
 		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y)) {
 			clickClaimedThisFrame = true;
 			dragging = true;
+			isAutoMoving = false; 
 			offsetX  = mouse.x - x;
 			offsetY  = mouse.y - y;
 			velocityX = velocityY = 0;
@@ -123,11 +139,23 @@ public class Card {
 
 		if (dragging && !holding) dragging = false;
 
-		if (!dragging) {
+		if (!dragging && !isAutoMoving) {
 			x += velocityX * dt;
 			y += velocityY * dt;
 			velocityX *= 0.90f;
 			velocityY *= 0.90f;
+		}
+
+		// AUTO MOVEMENT LOGIC
+		if (isAutoMoving) {
+			x = MathUtils.lerp(x, targetX, dt * MOVE_SPEED);
+			y = MathUtils.lerp(y, targetY, dt * MOVE_SPEED);
+			
+			if (Math.abs(x - targetX) < 1f && Math.abs(y - targetY) < 1f) {
+				x = targetX;
+				y = targetY;
+				isAutoMoving = false;
+			}
 		}
 
 		rotation += (targetRotation - rotation) * SMOOTH_SPEED * dt;
@@ -151,6 +179,8 @@ public class Card {
 			if (y < b.y) { y = b.y; velocityY = 0; }
 			if (y + height > b.y + b.height) { y = b.y + b.height - height; velocityY = 0; }
 		}
+
+		if (isAutoMoving) return;
 
 		Rectangle cardRect = new Rectangle(x, y, width, height);
 		for (Table table : containers) {
@@ -199,18 +229,13 @@ public class Card {
 		);
 
 		if (this.suit == CardSuit.NONE && javacideMain.font != null) {
-			// STATIC MARGINS
 			float textPaddingX = 30f;
 			float textPaddingY = 50f;
 			
-			// PROPORTIONAL TEXT SCALING
-			// We calculate a scale factor based on the card's current width 
-			// relative to a base width of 100.
 			float baseScale = (width / 100f) * 0.7f; 
 			javacideMain.font.getData().setScale(baseScale);
 			javacideMain.font.setColor(Color.BLACK);
 
-			// Line spacing also scales slightly to prevent overlaps
 			float lineSpacing = 20f * baseScale;
 			
 			javacideMain.font.draw(batch, "Hand Size: " + javacideMain.tableMaxCards, x + textPaddingX, y + height - textPaddingY);
