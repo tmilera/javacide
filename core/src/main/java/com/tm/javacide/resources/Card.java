@@ -200,8 +200,8 @@ public class Card {
 
 		if (this.suit == CardSuit.NONE && javacideMain.font != null) {
 			// STATIC MARGINS
-			float textPaddingX = 10f;
-			float textPaddingY = 20f;
+			float textPaddingX = 30f;
+			float textPaddingY = 50f;
 			
 			// PROPORTIONAL TEXT SCALING
 			// We calculate a scale factor based on the card's current width 

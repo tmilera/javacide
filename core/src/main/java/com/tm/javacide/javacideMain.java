@@ -1,7 +1,6 @@
 package com.tm.javacide;
  
 import com.badlogic.gdx.ApplicationAdapter;
-//import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -10,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.tm.javacide.resources.Button;
+import com.tm.javacide.resources.Button.ButtonType;
 import com.tm.javacide.resources.Card;
 import com.tm.javacide.resources.Card.CardSuit;
 import com.tm.javacide.resources.Deck;
@@ -30,7 +31,6 @@ public class javacideMain extends ApplicationAdapter {
 	public static int cardX = 120;
 	public static int cardY = 180;
     
-    // New custom dimensions for the info object
     private static int infoX = 200;
     private static int infoY = 200;
  
@@ -43,7 +43,8 @@ public class javacideMain extends ApplicationAdapter {
 	public static Texture deckTexture;
 	public static Texture enemyDeckTexture;
 	public static Texture tableTexture;
-	private static Texture infoTexture;
+	public static Texture infoTexture;
+	public static Texture buttonTexture;
 	public static BitmapFont font; 
  
 	public static OrthographicCamera camera;
@@ -61,6 +62,7 @@ public class javacideMain extends ApplicationAdapter {
 	private Deck playerDeck;         
 	private Deck enemyDeck;          
 	public static Card info; 
+	private Button autoDrawButton;
  
 	@Override
 	public void create() {
@@ -73,12 +75,14 @@ public class javacideMain extends ApplicationAdapter {
 		deckTexture  = new Texture("cards/card-back2.png");
 		enemyDeckTexture  = new Texture("cards/card-back1.png");
 		tableTexture = new Texture("cards/card-blank.png");
-		infoTexture  = new Texture("cards/card-blank.png"); 
+		infoTexture  = new Texture("cards/card-info.png"); 
+		buttonTexture = new Texture("cards/card-blank.png");
 
 		font = new BitmapFont();
 		font.setColor(Color.WHITE);
-		font.getData().setScale(0.8f); // Adjusted scale for a smaller 100x100 card
+		font.getData().setScale(0.8f);
  
+		// Positioning calculations
 		int tableCenterX = (WORLD_WIDTH - tableX) / 2;
 		int totalStackHeight = 3 * tableY + 2 * TABLE_GAP;
 		int stackBottomY     = (WORLD_HEIGHT - totalStackHeight) / 2;
@@ -87,18 +91,30 @@ public class javacideMain extends ApplicationAdapter {
 		int playerClubsTableY = stackBottomY + tableY + TABLE_GAP;
 		int enemyTableY       = stackBottomY + 2 * (tableY + TABLE_GAP);
  
+		// FIX: Correctly assigning the deck position
 		int deckX_pos = tableCenterX - deckX - DECK_GAP;
  
+		// Tables
 		playerTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, true, tableCenterX, playerTableY, tableTexture);
 		playerClubsTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, false, tableCenterX, playerClubsTableY, tableTexture);
 		playerClubsTable.setInteractable(false);
 		playerClubsTable.setOrganized(true);
 		enemyTable = new Table(TableType.ENEMYTABLE, null, false, tableCenterX, enemyTableY, tableTexture);
+		
+		// Buttons
+		
+		float autoDrawW = tableX / 4f;
+		float autoDrawH = tableY / 4f;
+		float autoDrawX = tableCenterX + (tableX / 2f) - (autoDrawW / 2f);
+		float autoDrawY = playerTableY - autoDrawH - 15f; // Placed beneath playerTable
+		
+		autoDrawButton = new Button(ButtonType.BUTTON, autoDrawX, autoDrawY, autoDrawW, autoDrawH, "AUTO-DRAW");
  
+		// Decks
 		playerDeck = new Deck(DeckType.PLAYERDECK, deckX_pos, playerTableY, deckTexture);
 		enemyDeck  = new Deck(DeckType.ENEMYDECK,  deckX_pos, enemyTableY,  enemyDeckTexture);
 
-		// Initialize info card with custom infoX and infoY
+		// Info Card
 		info = new Card(50, 50, infoX, infoY, infoTexture, CardSuit.NONE);
 	}
  
@@ -120,6 +136,9 @@ public class javacideMain extends ApplicationAdapter {
 		enemyTable.render(batch);
 		playerDeck.render(batch);
 		enemyDeck.render(batch);
+		
+	
+		autoDrawButton.render(batch);
 
 		info.render(batch); 
 		batch.end();
@@ -127,6 +146,11 @@ public class javacideMain extends ApplicationAdapter {
 		playerTable.update(playerDeck.getCards());
 		playerClubsTable.update(playerDeck.getCards());
 		enemyTable.update(enemyDeck.getCards());
+
+		// Logic for button interaction
+		if(autoDrawButton.isClicked()) {
+			// Logic for auto-drawing cards could go here
+		}
 	}
  
 	@Override
@@ -141,7 +165,10 @@ public class javacideMain extends ApplicationAdapter {
 		enemyDeckTexture.dispose();
 		tableTexture.dispose();
 		infoTexture.dispose();
+		buttonTexture.dispose();
 		font.dispose(); 
 		info.dispose();
+		
+		autoDrawButton.dispose();
 	}
 }
