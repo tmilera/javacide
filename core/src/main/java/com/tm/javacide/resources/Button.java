@@ -17,12 +17,9 @@ public class Button {
     private ButtonType type;
     private float x, y, width, height;
     private String text;
-    private Texture texture;
     private Rectangle bounds;
     
-    // Color tweening variables
     private Color borderColor = new Color(Color.WHITE);
-    private float lerpTarget = 0f; // 0 = White, 1 = Yellow
     private static final float LERP_SPEED = 5f;
 
     public Button(ButtonType type, float x, float y, float width, float height, String text) {
@@ -33,8 +30,6 @@ public class Button {
         this.height = height;
         this.text = text;
         this.bounds = new Rectangle(x, y, width, height);
-        // Default texture as requested
-        this.texture = javacideMain.buttonTexture;
     }
 
     public boolean isHovered() {
@@ -48,49 +43,46 @@ public class Button {
     }
 
     public void update(float dt) {
-        // Update lerp target based on hover state
-        lerpTarget = isHovered() ? 1f : 0f;
-
-        // Smoothly transition the color
-        borderColor.r = com.badlogic.gdx.math.MathUtils.lerp(borderColor.r, isHovered() ? Color.YELLOW.r : Color.WHITE.r, LERP_SPEED * dt);
-        borderColor.g = com.badlogic.gdx.math.MathUtils.lerp(borderColor.g, isHovered() ? Color.YELLOW.g : Color.WHITE.g, LERP_SPEED * dt);
-        borderColor.b = com.badlogic.gdx.math.MathUtils.lerp(borderColor.b, isHovered() ? Color.YELLOW.b : Color.WHITE.b, LERP_SPEED * dt);
+        Color targetColor = isHovered() ? Color.YELLOW : Color.WHITE;
+        
+        // FIX: Safely lerp the RGB values, forcing Alpha to 1 to prevent disappearing glitches
+        borderColor.r = com.badlogic.gdx.math.MathUtils.lerp(borderColor.r, targetColor.r, LERP_SPEED * dt);
+        borderColor.g = com.badlogic.gdx.math.MathUtils.lerp(borderColor.g, targetColor.g, LERP_SPEED * dt);
+        borderColor.b = com.badlogic.gdx.math.MathUtils.lerp(borderColor.b, targetColor.b, LERP_SPEED * dt);
+        borderColor.a = 1f; 
     }
 
     public void render(SpriteBatch batch) {
+        // Safe check for the global texture
+        Texture tex = javacideMain.buttonTexture;
+        if (tex == null) return;
+
         update(Gdx.graphics.getDeltaTime());
 
-        // 1. Draw Background (Panel/Button body)
-        batch.setColor(Color.DARK_GRAY); // Dim the background texture slightly
-        batch.draw(texture, x, y, width, height);
+        batch.setColor(Color.DARK_GRAY); 
+        batch.draw(tex, x, y, width, height);
 
-        // 2. Draw Border (5 pixel width)
         batch.setColor(borderColor);
         float thickness = 5f;
-        // Bottom
-        batch.draw(texture, x, y, width, thickness);
-        // Top
-        batch.draw(texture, x, y + height - thickness, width, thickness);
-        // Left
-        batch.draw(texture, x, y, thickness, height);
-        // Right
-        batch.draw(texture, x + width - thickness, y, thickness, height);
+        batch.draw(tex, x, y, width, thickness);
+        batch.draw(tex, x, y + height - thickness, width, thickness);
+        batch.draw(tex, x, y, thickness, height);
+        batch.draw(tex, x + width - thickness, y, thickness, height);
 
-        // 3. Draw Text
         if (text != null && javacideMain.font != null) {
             javacideMain.font.setColor(Color.WHITE);
-            // Center the text
             GlyphLayout layout = new GlyphLayout(javacideMain.font, text);
             float textX = x + (width - layout.width) / 2;
             float textY = y + (height + layout.height) / 2;
             javacideMain.font.draw(batch, text, textX, textY);
         }
-
-        // Reset batch color for next objects
+        
+        // Reset the batch back to default
         batch.setColor(Color.WHITE);
     }
 
     public void dispose() {
-        if (texture != null) texture.dispose();
+        // FIX: Do NOT dispose javacideMain.buttonTexture here! 
+        // Calling dispose here destroys the global texture causing all other buttons to turn invisible.
     }
 }

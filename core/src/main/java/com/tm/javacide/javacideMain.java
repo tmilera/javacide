@@ -1,6 +1,8 @@
 package com.tm.javacide;
  
 import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -15,6 +17,7 @@ import com.tm.javacide.resources.Card;
 import com.tm.javacide.resources.Card.CardSuit;
 import com.tm.javacide.resources.Deck;
 import com.tm.javacide.resources.Deck.DeckType;
+import com.tm.javacide.resources.Panel;
 import com.tm.javacide.resources.Table;
 import com.tm.javacide.resources.Table.TableType;
 import java.util.List;
@@ -46,6 +49,7 @@ public class javacideMain extends ApplicationAdapter {
 	public static Texture tableTexture;
 	public static Texture infoTexture;
 	public static Texture buttonTexture;
+	public static Texture panelTexture; // NEW: Texture for the context panel
 	public static BitmapFont font; 
  
 	public static OrthographicCamera camera;
@@ -64,6 +68,8 @@ public class javacideMain extends ApplicationAdapter {
 	private Deck enemyDeck;          
 	public static Card info; 
 	private Button autoDrawButton;
+
+	public static Panel activePanel = null; // NEW: Global reference to the currently open panel
  
 	@Override
 	public void create() {
@@ -78,6 +84,7 @@ public class javacideMain extends ApplicationAdapter {
 		tableTexture = new Texture("cards/card-blank.png");
 		infoTexture  = new Texture("cards/card-info.png"); 
 		buttonTexture = new Texture("cards/card-blank.png");
+		panelTexture = new Texture("cards/card-blank.png"); // Initialize panel texture
 
 		font = new BitmapFont();
 		font.setColor(Color.WHITE);
@@ -134,6 +141,12 @@ public class javacideMain extends ApplicationAdapter {
 		autoDrawButton.render(batch);
 
 		info.render(batch); 
+
+		// Render active panel on top of everything
+		if (activePanel != null) {
+			activePanel.render(batch);
+		}
+
 		batch.end();
  
 		playerTable.update(playerDeck.getCards());
@@ -142,6 +155,14 @@ public class javacideMain extends ApplicationAdapter {
 
 		if(autoDrawButton.isClicked()) {
 			handleAutoDraw();
+		}
+
+		// LOGIC: Dismiss the active panel if you left click anywhere EXCEPT on the panel itself
+		if (activePanel != null && Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+			if (!activePanel.isHovered()) {
+				activePanel.dispose();
+				activePanel = null;
+			}
 		}
 	}
 
@@ -163,7 +184,6 @@ public class javacideMain extends ApplicationAdapter {
 			}
 
 			if (targetTable != null) {
-				// FIX: Added random visual offset so flying cards don't perfectly eclipse each other
 				float randomOffsetX = (float) (Math.random() * 60 - 30);
 				float randomOffsetY = (float) (Math.random() * 60 - 30);
 				
@@ -188,8 +208,10 @@ public class javacideMain extends ApplicationAdapter {
 		tableTexture.dispose();
 		infoTexture.dispose();
 		buttonTexture.dispose();
+		panelTexture.dispose();
 		font.dispose(); 
 		info.dispose();
 		autoDrawButton.dispose();
+		if (activePanel != null) activePanel.dispose();
 	}
 }

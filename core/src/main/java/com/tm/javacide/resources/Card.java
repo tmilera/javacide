@@ -33,7 +33,9 @@ public class Card {
 	final int value;
 	private CardSuit suit;
 	final Deck parentDeck;
-	public Table containedBy = null;
+	
+	// FIX: Made containedBy public so it is accessible in javacideMain
+	public Table containedBy = null; 
 
 	public CardSuit getSuit() { return suit; }
 	public float getX()      { return x; }
@@ -63,7 +65,6 @@ public class Card {
 	private boolean isAutoMoving = false;
 	private static final float MOVE_SPEED = 5f;
 
-	// FIX: Added getter so tables know if the card is currently flying
 	public boolean isAutoMoving() { return isAutoMoving; }
 
 	public Card(Deck parentDeck, int x, int y, Texture ignoredDefaultTexture) {
@@ -112,8 +113,31 @@ public class Card {
 		javacideMain.viewport.unproject(mouse);
 
 		boolean justPressed = Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);
+		boolean rightJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT);
 		boolean holding     = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
 
+		// RIGHT CLICK PANEL LOGIC
+		if (interactable && rightJustPressed && contains(mouse.x, mouse.y) && containedBy != null) {
+			if (javacideMain.activePanel != null && javacideMain.activePanel.getTargetCard() == this) {
+				javacideMain.activePanel.dispose();
+				javacideMain.activePanel = null;
+			} else {
+				if (javacideMain.activePanel != null) {
+					javacideMain.activePanel.dispose();
+				}
+				
+				int optionsCount = (this.suit == CardSuit.CLUBS) ? 3 : 2;
+
+				// FIX: Set the panel dimensions to perfectly match this card's dimensions
+				float panelX = x + width + 10f;
+				float panelW = this.width;
+				float panelH = this.height;
+				
+				javacideMain.activePanel = new Panel(this, panelX, y, panelW, panelH, optionsCount);
+			}
+		}
+
+		// LEFT CLICK DRAG LOGIC
 		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y)) {
 			clickClaimedThisFrame = true;
 			dragging = true;
