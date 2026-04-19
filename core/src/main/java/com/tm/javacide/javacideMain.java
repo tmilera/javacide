@@ -30,6 +30,7 @@ public class javacideMain extends ApplicationAdapter {
  
 	public static int tableMaxCards = 5;
 	public static Texture deckTexture;
+	public static Texture enemyDeckTexture;
 	public static Texture tableTexture;
  
 	public static OrthographicCamera camera;
@@ -56,6 +57,7 @@ public class javacideMain extends ApplicationAdapter {
 		viewport.apply(true);
  
 		deckTexture  = new Texture("cards/card-back2.png");
+		enemyDeckTexture  = new Texture("cards/card-back1.png");
 		tableTexture = new Texture("cards/card-blank.png");
  
 		int tableCenterX = (WORLD_WIDTH - tableX) / 2;
@@ -86,7 +88,7 @@ public class javacideMain extends ApplicationAdapter {
  
 		// ---- Decks ----
 		playerDeck = new Deck(DeckType.PLAYERDECK, deckX_pos, playerTableY, deckTexture);
-		enemyDeck  = new Deck(DeckType.ENEMYDECK,  deckX_pos, enemyTableY,  deckTexture);
+		enemyDeck  = new Deck(DeckType.ENEMYDECK,  deckX_pos, enemyTableY,  enemyDeckTexture);
 	}
  
 	@Override
