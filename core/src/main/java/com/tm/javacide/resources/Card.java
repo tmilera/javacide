@@ -16,7 +16,7 @@ import com.tm.javacide.resources.Deck.DeckType;
 
 public class Card {
 
-	public enum CardSuit { DIAMONDS, CLUBS, SPADES, HEARTS }
+	public enum CardSuit { DIAMONDS, CLUBS, SPADES, HEARTS, NONE } // Added NONE
 
 	private static final List<Rectangle> obstacles = new ArrayList<>();
 	public static void registerObstacle(Rectangle rect)   { obstacles.add(rect); }
@@ -49,23 +49,20 @@ public class Card {
 	private float x, y, velocityX, velocityY, rotation, targetRotation;
 	private boolean dragging = false;
 	private float offsetX, offsetY;
-	private Texture texture; // This now holds the specific card face
+	private Texture texture; 
 	private static final CardSuit[] suitValues = CardSuit.values();
 
-	// Rotation settings
 	private static final float MAX_LEAN = 15f;
 	private static final float LEAN_SENSITIVITY = 0.015f;
 	private static final float SMOOTH_SPEED = 6f;
 
 	/**
-	 * Constructor updated to ignore the passed texture and load a specific one 
-	 * from assets/cards/ based on suit and value.
+	 * Standard Deck Constructor
 	 */
 	public Card(Deck parentDeck, int x, int y, Texture ignoredDefaultTexture) {
 		this.parentDeck = parentDeck;
 		this.suit       = suitValues[ThreadLocalRandom.current().nextInt(0, 4)];
 		
-		// Value logic provided: Player (1-10), Enemy (1-3)
 		this.value = (parentDeck.getDeckType() == DeckType.PLAYERDECK) 
 					 ? ThreadLocalRandom.current().nextInt(1, 11) 
 					 : ThreadLocalRandom.current().nextInt(1, 4);
@@ -75,11 +72,23 @@ public class Card {
 		this.x          = x;
 		this.y          = y;
 
-		// Dynamic Texture Loading
-		// Format: assets/cards/card-diamonds-1.png
 		String suitName = this.suit.name().toLowerCase();
 		String fileName = "cards/card-" + suitName + "-" + this.value + ".png";
 		this.texture = new Texture(Gdx.files.internal(fileName));
+	}
+
+	/**
+	 * Constructor for Special/Standalone Cards (e.g., Info Card)
+	 */
+	public Card(int x, int y, Texture texture, CardSuit suit) {
+		this.parentDeck = null;
+		this.suit       = suit;
+		this.value      = 0;
+		this.clickable  = true;
+		this.draggable  = true;
+		this.x          = x;
+		this.y          = y;
+		this.texture    = texture;
 	}
 
 	public void update() {
@@ -98,7 +107,10 @@ public class Card {
 			offsetX  = mouse.x - x;
 			offsetY  = mouse.y - y;
 			velocityX = velocityY = 0;
-			parentDeck.moveToFront(this);
+			
+			if (parentDeck != null) { // Null check for standalone cards
+				parentDeck.moveToFront(this);
+			}
 		}
 
 		if (dragging && holding) {
@@ -131,10 +143,14 @@ public class Card {
 		float cardW = javacideMain.cardX, cardH = javacideMain.cardY;
 		float screenW = javacideMain.WORLD_WIDTH, screenH = javacideMain.WORLD_HEIGHT;
 
+		// Wall collisions - applies to all cards
 		if (x < 0) { x = 0; velocityX = 0; }
 		if (x + cardW > screenW) { x = screenW - cardW; velocityX = 0; }
 		if (y < 0) { y = 0; velocityY = 0; }
 		if (y + cardH > screenH) { y = screenH - cardH; velocityY = 0; }
+
+		// Exit early for NONE suit - no container or obstacle collision
+		if (this.suit == CardSuit.NONE) return;
 
 		if (containedBy != null) {
 			Rectangle b = containedBy.getBounds();
@@ -176,7 +192,6 @@ public class Card {
 	public void render(SpriteBatch batch) {
 		update();
 		
-		// Updated to use the local texture instead of the global placeholder
 		batch.draw(this.texture, 
 				x, y,                             
 				javacideMain.cardX / 2f,          
@@ -193,7 +208,6 @@ public class Card {
 	}
 
 	public void dispose() { 
-		// Since each card now owns a unique Texture instance, we must dispose it
 		if (this.texture != null) {
 			this.texture.dispose();
 		}

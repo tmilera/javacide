@@ -1,13 +1,14 @@
 package com.tm.javacide;
  
 import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
+//import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.tm.javacide.resources.Card;
 import com.tm.javacide.resources.Card.CardSuit;
 import com.tm.javacide.resources.Deck;
 import com.tm.javacide.resources.Deck.DeckType;
@@ -16,6 +17,12 @@ import com.tm.javacide.resources.Table.TableType;
  
 public class javacideMain extends ApplicationAdapter {
  
+	// player variables
+	public static int tableMaxCards = 5;
+	public static int playerHealth = 50;
+	public static int playerScore = 0;
+	public static int playerCurrentRound = 1;
+	
 	public static final int WORLD_WIDTH  = 1920;
 	public static final int WORLD_HEIGHT = 1080;
  
@@ -28,10 +35,10 @@ public class javacideMain extends ApplicationAdapter {
 	public static int tableX = 760;
 	public static int tableY = 220;
  
-	public static int tableMaxCards = 5;
 	public static Texture deckTexture;
 	public static Texture enemyDeckTexture;
 	public static Texture tableTexture;
+	private static Texture infoTexture; // Added info texture
  
 	public static OrthographicCamera camera;
 	public static Viewport viewport;
@@ -47,6 +54,7 @@ public class javacideMain extends ApplicationAdapter {
  
 	private Deck playerDeck;         
 	private Deck enemyDeck;          
+	public static Card info; // Added info card object
  
 	@Override
 	public void create() {
@@ -59,6 +67,7 @@ public class javacideMain extends ApplicationAdapter {
 		deckTexture  = new Texture("cards/card-back2.png");
 		enemyDeckTexture  = new Texture("cards/card-back1.png");
 		tableTexture = new Texture("cards/card-blank.png");
+		infoTexture  = tableTexture; // Assigned back4
  
 		int tableCenterX = (WORLD_WIDTH - tableX) / 2;
  
@@ -71,24 +80,17 @@ public class javacideMain extends ApplicationAdapter {
  
 		int deckX_pos = tableCenterX - deckX - DECK_GAP;
  
-		// ---- Tables ----
-		
-		// All tables now use the 6-parameter constructor for consistency.
-		
-		// 1. playerTable: Excludes CLUBS (restrictedSuit = CLUBS, isExclusionary = true)
 		playerTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, true, tableCenterX, playerTableY, tableTexture);
-		
-		// 2. playerClubsTable: Only CLUBS (restrictedSuit = CLUBS, isExclusionary = false)
 		playerClubsTable = new Table(TableType.PLAYERTABLE, CardSuit.CLUBS, false, tableCenterX, playerClubsTableY, tableTexture);
-		playerClubsTable.setInteractable(false); // New behavior: Cannot click cards inside
-		playerClubsTable.setOrganized(true);    // New behavior: Centered auto-layout
-		
-		// 3. enemyTable: No restrictions (restrictedSuit = null, isExclusionary = false)
+		playerClubsTable.setInteractable(false);
+		playerClubsTable.setOrganized(true);
 		enemyTable = new Table(TableType.ENEMYTABLE, null, false, tableCenterX, enemyTableY, tableTexture);
  
-		// ---- Decks ----
 		playerDeck = new Deck(DeckType.PLAYERDECK, deckX_pos, playerTableY, deckTexture);
 		enemyDeck  = new Deck(DeckType.ENEMYDECK,  deckX_pos, enemyTableY,  enemyDeckTexture);
+
+		// Initialize info card with NONE suit
+		info = new Card(100, 100, infoTexture, CardSuit.NONE);
 	}
  
 	@Override
@@ -111,6 +113,8 @@ public class javacideMain extends ApplicationAdapter {
  
 		playerDeck.render(batch);
 		enemyDeck.render(batch);
+
+		info.render(batch); // Render info card last to keep it on top
  
 		batch.end();
  
@@ -128,6 +132,9 @@ public class javacideMain extends ApplicationAdapter {
 		playerDeck.dispose();
 		enemyDeck.dispose();
 		deckTexture.dispose();
+		enemyDeckTexture.dispose();
 		tableTexture.dispose();
+		infoTexture.dispose(); // Clean up
+		info.dispose();
 	}
 }

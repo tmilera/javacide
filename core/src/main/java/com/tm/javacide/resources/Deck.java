@@ -1,7 +1,7 @@
 package com.tm.javacide.resources;
  
 import java.util.ArrayList;
-import java.util.Collections;
+//import java.util.Collections;
 import java.util.List;
  
 import com.badlogic.gdx.Gdx;
@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.tm.javacide.javacideMain;
-import com.tm.javacide.resources.Table.TableType;
+//import com.tm.javacide.resources.Table.TableType;
  
 public class Deck {
  
