@@ -1,111 +1,202 @@
 package com.tm.javacide.resources;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.tm.javacide.javacideMain;
 import com.tm.javacide.resources.Deck.DeckType;
 
-/*	CARD PARADIGM:
- * 	card should be able to be spawned and rendered from the position of a deck
- * 	intially draggable and whatnot, with values according to preset
- * 	card moves around to the mouse when clicked on, with some animations of motion
- * 	cards can be brought into your table, of a certain maximal amount, 
- * 	in order to fight i'd imagine that the enemy cards, in the opposing deck
- * 	take your cards and drag onto the enemy card, maybe show a little decision panel:
- * 	::: DO YOU WANT TO ATTACK???? YES : CANCEL ::: something like that
- * 	same for a card's special abilities
- * 	maybe also little right-click menu for each cards to either attack or whatnot, for idiots who dont know as much
- */
-
 public class Card {
-	// cards which are passed out, drawn, etc etc
-	public enum CardSuit {
-		DIAMONDS,
-		CLUBS,
-		SPADES,
-		HEARTS,
-	}
-	
-	// definer variables
+
+	public enum CardSuit { DIAMONDS, CLUBS, SPADES, HEARTS }
+
+	private static final List<Rectangle> obstacles = new ArrayList<>();
+	public static void registerObstacle(Rectangle rect)   { obstacles.add(rect); }
+	public static void unregisterObstacle(Rectangle rect) { obstacles.remove(rect); }
+
+	private static final List<Table> containers = new ArrayList<>();
+	public static void registerContainer(Table table)   { containers.add(table); }
+	public static void unregisterContainer(Table table) { containers.remove(table); }
+
+	private static boolean clickClaimedThisFrame = false;
+	public static void resetClickClaim() { clickClaimedThisFrame = false; }
+
 	final int value;
 	private CardSuit suit;
 	final Deck parentDeck;
-	
-	// action variables
-	private boolean clickable;
-	private boolean draggable;
-	private boolean flippable;
-	
-	// state variables
-	private boolean flipped;
-	private boolean clicked;
-	
-	// positions
-	private int x;
-	private int y;
-	
-	// object variables
-	private Texture texture;
-	
+	Table containedBy = null;
+
+	public CardSuit getSuit() { return suit; }
+	public float getX()      { return x; }
+	public float getY()      { return y; }
+
+	public void setPosition(float nx, float ny) {
+		this.x = nx;
+		this.y = ny;
+		this.velocityX = 0;
+		this.velocityY = 0;
+	}
+
+	private boolean clickable, draggable;
+	private float x, y, velocityX, velocityY, rotation, targetRotation;
+	private boolean dragging = false;
+	private float offsetX, offsetY;
+	private Texture texture; // This now holds the specific card face
 	private static final CardSuit[] suitValues = CardSuit.values();
-	
-	public Card(Deck parentDeck, int x, int y, Texture texture) {
-		// auto creator
+
+	// Rotation settings
+	private static final float MAX_LEAN = 15f;
+	private static final float LEAN_SENSITIVITY = 0.015f;
+	private static final float SMOOTH_SPEED = 6f;
+
+	/**
+	 * Constructor updated to ignore the passed texture and load a specific one 
+	 * from assets/cards/ based on suit and value.
+	 */
+	public Card(Deck parentDeck, int x, int y, Texture ignoredDefaultTexture) {
 		this.parentDeck = parentDeck;
-		this.suit = suitValues[generateValue(0,3)];
-		this.clickable = true;
-		this.draggable = true;
-		this.flippable = true;
-		this.flipped = false;
-		this.clicked = false;
-		this.texture = texture;
+		this.suit       = suitValues[ThreadLocalRandom.current().nextInt(0, 4)];
 		
-		this.x = x;
-		this.y = y;
-		
-		if (parentDeck.getDeckType()==DeckType.PLAYERDECK) {
-			// card from the player's deck the player is supposed to use
-			this.value = generateValue(2,11);
+		// Value logic provided: Player (1-10), Enemy (1-3)
+		this.value = (parentDeck.getDeckType() == DeckType.PLAYERDECK) 
+					 ? ThreadLocalRandom.current().nextInt(1, 11) 
+					 : ThreadLocalRandom.current().nextInt(1, 4);
+
+		this.clickable  = true;
+		this.draggable  = true;
+		this.x          = x;
+		this.y          = y;
+
+		// Dynamic Texture Loading
+		// Format: assets/cards/card-diamonds-1.png
+		String suitName = this.suit.name().toLowerCase();
+		String fileName = "cards/card-" + suitName + "-" + this.value + ".png";
+		this.texture = new Texture(Gdx.files.internal(fileName));
+	}
+
+	public void update() {
+		boolean interactable = (containedBy == null || containedBy.isInteractable());
+		float dt = Gdx.graphics.getDeltaTime();
+
+		Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+		javacideMain.viewport.unproject(mouse);
+
+		boolean justPressed = Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);
+		boolean holding     = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+
+		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y)) {
+			clickClaimedThisFrame = true;
+			dragging = true;
+			offsetX  = mouse.x - x;
+			offsetY  = mouse.y - y;
+			velocityX = velocityY = 0;
+			parentDeck.moveToFront(this);
+		}
+
+		if (dragging && holding) {
+			float prevX = x, prevY = y;
+			x = mouse.x - offsetX;
+			y = mouse.y - offsetY;
+			if (dt > 0) {
+				velocityX = (x - prevX) / dt;
+				velocityY = (y - prevY) / dt;
+			}
+			targetRotation = MathUtils.clamp(-velocityX * LEAN_SENSITIVITY, -MAX_LEAN, MAX_LEAN);
 		} else {
-			// card from the face deck of the enemies you're supposed to beat
-			this.value = generateValue(1,4);
+			targetRotation = 0;
+		}
+
+		if (dragging && !holding) dragging = false;
+
+		if (!dragging) {
+			x += velocityX * dt;
+			y += velocityY * dt;
+			velocityX *= 0.90f;
+			velocityY *= 0.90f;
+		}
+
+		rotation += (targetRotation - rotation) * SMOOTH_SPEED * dt;
+		resolveCollisions();
+	}
+
+	private void resolveCollisions() {
+		float cardW = javacideMain.cardX, cardH = javacideMain.cardY;
+		float screenW = javacideMain.WORLD_WIDTH, screenH = javacideMain.WORLD_HEIGHT;
+
+		if (x < 0) { x = 0; velocityX = 0; }
+		if (x + cardW > screenW) { x = screenW - cardW; velocityX = 0; }
+		if (y < 0) { y = 0; velocityY = 0; }
+		if (y + cardH > screenH) { y = screenH - cardH; velocityY = 0; }
+
+		if (containedBy != null) {
+			Rectangle b = containedBy.getBounds();
+			if (x < b.x) { x = b.x; velocityX = 0; }
+			if (x + cardW > b.x + b.width) { x = b.x + b.width - cardW; velocityX = 0; }
+			if (y < b.y) { y = b.y; velocityY = 0; }
+			if (y + cardH > b.y + b.height) { y = b.y + b.height - cardH; velocityY = 0; }
+		}
+
+		Rectangle cardRect = new Rectangle(x, y, cardW, cardH);
+		for (Table table : containers) {
+			if (containedBy == table || table.isSuitAllowed(this.suit)) continue;
+			handleObstacleCollision(cardRect, table.getBounds());
+			cardRect.set(x, y, cardW, cardH);
 		}
 	}
-	
-	public Card(Deck parentDeck, CardSuit suit, int value, boolean clickable, boolean draggable, boolean flippable, boolean flipped, boolean clicked, Texture texture, int x, int y) {
-		// manual creation
-		this.parentDeck = parentDeck;
-		this.suit = suit;
-		this.clickable = clickable;
-		this.draggable = draggable;
-		this.flippable = flippable;
-		this.flipped = flipped;
-		this.clicked = clicked;
-		this.texture = texture;
-		this.value = value;
-		
-		this.x = x;
-		this.y = y;
+
+	private void handleObstacleCollision(Rectangle cardRect, Rectangle obs) {
+		if (!cardRect.overlaps(obs)) return;
+		float overlapLeft = (cardRect.x + cardRect.width) - obs.x;
+		float overlapRight = (obs.x + obs.width) - cardRect.x;
+		float overlapBottom = (cardRect.y + cardRect.height) - obs.y;
+		float overlapTop = (obs.y + obs.height) - cardRect.y;
+		float minX = Math.min(overlapLeft, overlapRight);
+		float minY = Math.min(overlapBottom, overlapTop);
+		if (minX < minY) {
+			if (overlapLeft < overlapRight) { x -= overlapLeft; velocityX = 0; }
+			else { x += overlapRight; velocityX = 0; }
+		} else {
+			if (overlapBottom < overlapTop) { y -= overlapBottom; velocityY = 0; }
+			else { y += overlapTop; velocityY = 0; }
+		}
 	}
-	
-	private int generateValue(int low, int high) {
-		return ThreadLocalRandom.current().nextInt(low,high);
+
+	private boolean contains(float mx, float my) {
+		return mx >= x && mx <= x + javacideMain.cardX && my >= y && my <= y + javacideMain.cardY;
 	}
-	
+
 	public void render(SpriteBatch batch) {
-		// recall, 0,0 here is position, not scale
-		batch.draw(javacideMain.cardTexture, 0, 0, javacideMain.cardX, javacideMain.cardY);
-	}
-	
-	public void dispose() { 
-		texture.dispose();
-	}
-	
-	/*
-	 * public void create() {
+		update();
 		
-	   }
-	*/
+		// Updated to use the local texture instead of the global placeholder
+		batch.draw(this.texture, 
+				x, y,                             
+				javacideMain.cardX / 2f,          
+				javacideMain.cardY / 2f,          
+				javacideMain.cardX,               
+				javacideMain.cardY,               
+				1f, 1f,                           
+				rotation,                         
+				0, 0,                             
+				this.texture.getWidth(), 
+				this.texture.getHeight(), 
+				false, false                      
+		);
+	}
+
+	public void dispose() { 
+		// Since each card now owns a unique Texture instance, we must dispose it
+		if (this.texture != null) {
+			this.texture.dispose();
+		}
+	}
 }
+ 
