@@ -1,7 +1,6 @@
 package com.tm.javacide.resources;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -14,7 +13,7 @@ public class Panel {
     private Rectangle bounds;
     private Button[] subButtons;
 
-    public Panel(Card targetCard, float x, float y, float width, float height, int numButtons) {
+    public Panel(Card targetCard, float x, float y, float width, float height) {
         this.targetCard = targetCard;
         this.x = x;
         this.y = y;
@@ -22,27 +21,56 @@ public class Panel {
         this.height = height;
         this.bounds = new Rectangle(x, y, width, height);
 
+        // 1. Determine Button Content based on Suit
+        String[] buttonTexts;
+        boolean[] clickables;
+        int value = targetCard.getValue();
+
+        switch(targetCard.getSuit()) {
+            case CLUBS:
+                buttonTexts = new String[] { "Enemy Card\nAttacks for: " + value };
+                clickables = new boolean[] { false };
+                break;
+            case SPADES:
+                buttonTexts = new String[] { "Attack for: " + value };
+                clickables = new boolean[] { true };
+                break;
+            case DIAMONDS:
+                buttonTexts = new String[] { "Draw for: " + value, "Attack for: " + value };
+                clickables = new boolean[] { true, true };
+                break;
+            case HEARTS:
+                buttonTexts = new String[] { "Heal for: " + value };
+                clickables = new boolean[] { true };
+                break;
+            default:
+                buttonTexts = new String[0];
+                clickables = new boolean[0];
+                break;
+        }
+
+        int numButtons = buttonTexts.length;
         this.subButtons = new Button[numButtons];
 
+        // 2. Format Button Geometry inside the Panel
         float padding = 10f;
         float btnWidth = width - (padding * 2);
         
-        // Calculate the physical space allocated for each button's slot
-        float slotHeight = (height - (padding * (numButtons + 1))) / numButtons;
+        // Force the layout to calculate slots as if there are at least 2 buttons
+        int maxSlots = Math.max(2, numButtons);
         
-        // Make the actual button 6 pixels thinner than the slot height
-        float btnHeight = slotHeight - 6f;
+        float slotHeight = (height - (padding * (maxSlots + 1))) / maxSlots;
+        float btnHeight = slotHeight - 6f; 
 
         for (int i = 0; i < numButtons; i++) {
             float btnX = x + padding;
             
-            // Find the Y position of the slot
+            // This naturally starts at the top slot and moves down
             float slotY = y + height - padding - (slotHeight * (i + 1)) - (padding * i);
+            float btnY = slotY + 3f; 
             
-            // Shift the button up by 3 pixels to keep it vertically centered inside its slot
-            float btnY = slotY + 3f;
-            
-            subButtons[i] = new Button(Button.ButtonType.PANEL, btnX, btnY, btnWidth, btnHeight, "Action " + (i + 1));
+            subButtons[i] = new Button(Button.ButtonType.PANEL, btnX, btnY, btnWidth, btnHeight, buttonTexts[i]);
+            subButtons[i].setClickable(clickables[i]);
         }
     }
 
@@ -57,12 +85,39 @@ public class Panel {
     }
 
     public void render(SpriteBatch batch) {
-        // The background and border drawing logic has been completely removed 
-        // to make the main panel invisible.
-
-        // Render sub-buttons
-        for (Button b : subButtons) {
+        for (int i = 0; i < subButtons.length; i++) {
+            Button b = subButtons[i];
             b.render(batch);
+
+            if (b.isClicked()) {
+                handleAction(i);
+            }
+        }
+    }
+
+    private void handleAction(int buttonIndex) {
+        switch(targetCard.getSuit()) {
+            case SPADES:
+                if (buttonIndex == 0) {
+                    System.out.println("Spades attacked for: " + targetCard.getValue());
+                }
+                break;
+            case DIAMONDS:
+                if (buttonIndex == 0) {
+                    System.out.println("Diamonds drew for: " + targetCard.getValue());
+                } else if (buttonIndex == 1) {
+                    System.out.println("Diamonds attacked for: " + targetCard.getValue());
+                }
+                break;
+            case HEARTS:
+                if (buttonIndex == 0) {
+                    System.out.println("Hearts healed for: " + targetCard.getValue());
+                }
+                break;
+            case CLUBS:
+                break;
+            default:
+                break;
         }
     }
 

@@ -33,13 +33,12 @@ public class Card {
 	final int value;
 	private CardSuit suit;
 	final Deck parentDeck;
-	
-	// FIX: Made containedBy public so it is accessible in javacideMain
 	public Table containedBy = null; 
 
 	public CardSuit getSuit() { return suit; }
 	public float getX()      { return x; }
 	public float getY()      { return y; }
+	public int getValue()    { return value; }
 
 	public void setPosition(float nx, float ny) {
 		this.x = nx;
@@ -116,8 +115,8 @@ public class Card {
 		boolean rightJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT);
 		boolean holding     = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
 
-		// RIGHT CLICK PANEL LOGIC
-		if (interactable && rightJustPressed && contains(mouse.x, mouse.y) && containedBy != null) {
+		// RIGHT CLICK PANEL LOGIC - 'interactable' check removed so non-draggable cards can be inspected
+		if (rightJustPressed && contains(mouse.x, mouse.y) && containedBy != null) {
 			if (javacideMain.activePanel != null && javacideMain.activePanel.getTargetCard() == this) {
 				javacideMain.activePanel.dispose();
 				javacideMain.activePanel = null;
@@ -125,19 +124,16 @@ public class Card {
 				if (javacideMain.activePanel != null) {
 					javacideMain.activePanel.dispose();
 				}
-				
-				int optionsCount = (this.suit == CardSuit.CLUBS) ? 3 : 2;
 
-				// FIX: Set the panel dimensions to perfectly match this card's dimensions
 				float panelX = x + width + 10f;
 				float panelW = this.width;
 				float panelH = this.height;
 				
-				javacideMain.activePanel = new Panel(this, panelX, y, panelW, panelH, optionsCount);
+				javacideMain.activePanel = new Panel(this, panelX, y, panelW, panelH);
 			}
 		}
 
-		// LEFT CLICK DRAG LOGIC
+		// LEFT CLICK DRAG LOGIC - 'interactable' check remains here to prevent dragging non-interactable cards
 		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y)) {
 			clickClaimedThisFrame = true;
 			dragging = true;
@@ -170,7 +166,6 @@ public class Card {
 			velocityY *= 0.90f;
 		}
 
-		// AUTO MOVEMENT LOGIC
 		if (isAutoMoving) {
 			x = MathUtils.lerp(x, targetX, dt * MOVE_SPEED);
 			y = MathUtils.lerp(y, targetY, dt * MOVE_SPEED);
@@ -273,4 +268,3 @@ public class Card {
 		if (this.texture != null) this.texture.dispose();
 	}
 }
- 
