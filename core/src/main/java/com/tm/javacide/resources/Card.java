@@ -6,6 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -16,7 +17,7 @@ import com.tm.javacide.resources.Deck.DeckType;
 
 public class Card {
 
-	public enum CardSuit { DIAMONDS, CLUBS, SPADES, HEARTS, NONE } // Added NONE
+	public enum CardSuit { DIAMONDS, CLUBS, SPADES, HEARTS, NONE }
 
 	private static final List<Rectangle> obstacles = new ArrayList<>();
 	public static void registerObstacle(Rectangle rect)   { obstacles.add(rect); }
@@ -46,7 +47,7 @@ public class Card {
 	}
 
 	private boolean clickable, draggable;
-	private float x, y, velocityX, velocityY, rotation, targetRotation;
+	private float x, y, width, height, velocityX, velocityY, rotation, targetRotation;
 	private boolean dragging = false;
 	private float offsetX, offsetY;
 	private Texture texture; 
@@ -56,31 +57,26 @@ public class Card {
 	private static final float LEAN_SENSITIVITY = 0.015f;
 	private static final float SMOOTH_SPEED = 6f;
 
-	/**
-	 * Standard Deck Constructor
-	 */
 	public Card(Deck parentDeck, int x, int y, Texture ignoredDefaultTexture) {
 		this.parentDeck = parentDeck;
 		this.suit       = suitValues[ThreadLocalRandom.current().nextInt(0, 4)];
-		
-		this.value = (parentDeck.getDeckType() == DeckType.PLAYERDECK) 
-					 ? ThreadLocalRandom.current().nextInt(1, 11) 
-					 : ThreadLocalRandom.current().nextInt(1, 4);
+		this.value      = (parentDeck.getDeckType() == DeckType.PLAYERDECK) 
+					      ? ThreadLocalRandom.current().nextInt(1, 11) 
+					      : ThreadLocalRandom.current().nextInt(1, 4);
 
 		this.clickable  = true;
 		this.draggable  = true;
 		this.x          = x;
 		this.y          = y;
+		this.width      = javacideMain.cardX;
+		this.height     = javacideMain.cardY;
 
 		String suitName = this.suit.name().toLowerCase();
 		String fileName = "cards/card-" + suitName + "-" + this.value + ".png";
 		this.texture = new Texture(Gdx.files.internal(fileName));
 	}
 
-	/**
-	 * Constructor for Special/Standalone Cards (e.g., Info Card)
-	 */
-	public Card(int x, int y, Texture texture, CardSuit suit) {
+	public Card(int x, int y, float width, float height, Texture texture, CardSuit suit) {
 		this.parentDeck = null;
 		this.suit       = suit;
 		this.value      = 0;
@@ -88,6 +84,8 @@ public class Card {
 		this.draggable  = true;
 		this.x          = x;
 		this.y          = y;
+		this.width      = width;
+		this.height     = height;
 		this.texture    = texture;
 	}
 
@@ -107,10 +105,7 @@ public class Card {
 			offsetX  = mouse.x - x;
 			offsetY  = mouse.y - y;
 			velocityX = velocityY = 0;
-			
-			if (parentDeck != null) { // Null check for standalone cards
-				parentDeck.moveToFront(this);
-			}
+			if (parentDeck != null) parentDeck.moveToFront(this);
 		}
 
 		if (dragging && holding) {
@@ -140,31 +135,28 @@ public class Card {
 	}
 
 	private void resolveCollisions() {
-		float cardW = javacideMain.cardX, cardH = javacideMain.cardY;
 		float screenW = javacideMain.WORLD_WIDTH, screenH = javacideMain.WORLD_HEIGHT;
 
-		// Wall collisions - applies to all cards
 		if (x < 0) { x = 0; velocityX = 0; }
-		if (x + cardW > screenW) { x = screenW - cardW; velocityX = 0; }
+		if (x + width > screenW) { x = screenW - width; velocityX = 0; }
 		if (y < 0) { y = 0; velocityY = 0; }
-		if (y + cardH > screenH) { y = screenH - cardH; velocityY = 0; }
+		if (y + height > screenH) { y = screenH - height; velocityY = 0; }
 
-		// Exit early for NONE suit - no container or obstacle collision
 		if (this.suit == CardSuit.NONE) return;
 
 		if (containedBy != null) {
 			Rectangle b = containedBy.getBounds();
 			if (x < b.x) { x = b.x; velocityX = 0; }
-			if (x + cardW > b.x + b.width) { x = b.x + b.width - cardW; velocityX = 0; }
+			if (x + width > b.x + b.width) { x = b.x + b.width - width; velocityX = 0; }
 			if (y < b.y) { y = b.y; velocityY = 0; }
-			if (y + cardH > b.y + b.height) { y = b.y + b.height - cardH; velocityY = 0; }
+			if (y + height > b.y + b.height) { y = b.y + b.height - height; velocityY = 0; }
 		}
 
-		Rectangle cardRect = new Rectangle(x, y, cardW, cardH);
+		Rectangle cardRect = new Rectangle(x, y, width, height);
 		for (Table table : containers) {
 			if (containedBy == table || table.isSuitAllowed(this.suit)) continue;
 			handleObstacleCollision(cardRect, table.getBounds());
-			cardRect.set(x, y, cardW, cardH);
+			cardRect.set(x, y, width, height);
 		}
 	}
 
@@ -186,7 +178,7 @@ public class Card {
 	}
 
 	private boolean contains(float mx, float my) {
-		return mx >= x && mx <= x + javacideMain.cardX && my >= y && my <= y + javacideMain.cardY;
+		return mx >= x && mx <= x + width && my >= y && my <= y + height;
 	}
 
 	public void render(SpriteBatch batch) {
@@ -194,10 +186,10 @@ public class Card {
 		
 		batch.draw(this.texture, 
 				x, y,                             
-				javacideMain.cardX / 2f,          
-				javacideMain.cardY / 2f,          
-				javacideMain.cardX,               
-				javacideMain.cardY,               
+				width / 2f,          
+				height / 2f,          
+				width,               
+				height,               
 				1f, 1f,                           
 				rotation,                         
 				0, 0,                             
@@ -205,12 +197,31 @@ public class Card {
 				this.texture.getHeight(), 
 				false, false                      
 		);
+
+		if (this.suit == CardSuit.NONE && javacideMain.font != null) {
+			// STATIC MARGINS
+			float textPaddingX = 10f;
+			float textPaddingY = 20f;
+			
+			// PROPORTIONAL TEXT SCALING
+			// We calculate a scale factor based on the card's current width 
+			// relative to a base width of 100.
+			float baseScale = (width / 100f) * 0.7f; 
+			javacideMain.font.getData().setScale(baseScale);
+			javacideMain.font.setColor(Color.BLACK);
+
+			// Line spacing also scales slightly to prevent overlaps
+			float lineSpacing = 20f * baseScale;
+			
+			javacideMain.font.draw(batch, "Hand Size: " + javacideMain.tableMaxCards, x + textPaddingX, y + height - textPaddingY);
+			javacideMain.font.draw(batch, "Health: " + javacideMain.playerHealth, x + textPaddingX, y + height - textPaddingY - lineSpacing);
+			javacideMain.font.draw(batch, "Score: " + javacideMain.playerScore, x + textPaddingX, y + height - textPaddingY - (lineSpacing * 2));
+			javacideMain.font.draw(batch, "Round: " + javacideMain.playerCurrentRound, x + textPaddingX, y + height - textPaddingY - (lineSpacing * 3));
+		}
 	}
 
 	public void dispose() { 
-		if (this.texture != null) {
-			this.texture.dispose();
-		}
+		if (this.texture != null) this.texture.dispose();
 	}
 }
  
