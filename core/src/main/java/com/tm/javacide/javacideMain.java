@@ -68,6 +68,7 @@ public class javacideMain extends ApplicationAdapter {
 	public static Texture infoTexture;
 	public static Texture buttonTexture;
 	public static Texture panelTexture; 
+	public static Texture backgroundTexture;
 	public static BitmapFont font; 
  
 	public static OrthographicCamera camera;
@@ -117,6 +118,7 @@ public class javacideMain extends ApplicationAdapter {
 		infoTexture  = new Texture("cards/card-info.png"); 
 		buttonTexture = new Texture("cards/card-blank.png");
 		panelTexture = new Texture("cards/card-blank.png"); 
+		backgroundTexture = new Texture("back.png");
 
 		font = new BitmapFont();
 		font.getData().markupEnabled = true;
@@ -290,6 +292,10 @@ public class javacideMain extends ApplicationAdapter {
 		}
  
 		batch.begin();
+		// Background — drawn first so it sits below every other object
+		if (backgroundTexture != null) {
+			batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+		}
 		playerTable.render(batch);
 		playerClubsTable.render(batch);
 		enemyTable.render(batch);
@@ -544,6 +550,7 @@ public class javacideMain extends ApplicationAdapter {
 		if (infoTexture != null) infoTexture.dispose();
 		if (buttonTexture != null) buttonTexture.dispose();
 		if (panelTexture != null) panelTexture.dispose();
+		if (backgroundTexture != null) backgroundTexture.dispose();
 		if (font != null) font.dispose(); 
 		if (info != null) info.dispose();
 		if (autoDrawButton != null) autoDrawButton.dispose();

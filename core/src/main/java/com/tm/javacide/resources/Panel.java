@@ -1,20 +1,20 @@
 package com.tm.javacide.resources;
-
+ 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.tm.javacide.javacideMain;
-
+ 
 public class Panel {
-
+ 
     private Card targetCard;
     private float x, y, width, height;
     private Rectangle bounds;
     private Button[] subButtons;
     private int customDrawAmount = 0; 
     private int fightBareDamage = 0;
-
+ 
     public Panel(Card targetCard, float x, float y, float width, float height) {
         this.targetCard = targetCard;
         this.x = x;
@@ -22,7 +22,7 @@ public class Panel {
         this.width = width;
         this.height = height;
         this.bounds = new Rectangle(x, y, width, height);
-
+ 
         String[] buttonTexts;
         boolean[] clickables;
         int value = targetCard.getValue();
@@ -30,14 +30,14 @@ public class Panel {
         boolean isEnemyCard = (targetCard.getParentDeck() != null && targetCard.getParentDeck().getDeckType() == Deck.DeckType.ENEMYDECK) ||
                               (targetCard.containedBy != null && targetCard.containedBy.tableType == Table.TableType.ENEMYTABLE) ||
                               (targetCard.containedBy != null && targetCard.containedBy == javacideMain.instance.playerClubsTable);
-
+ 
         boolean isBossCard = (targetCard.containedBy != null && targetCard.containedBy.tableType == Table.TableType.ENEMYTABLE) || 
                              (targetCard.getParentDeck() != null && targetCard.getParentDeck().getDeckType() == Deck.DeckType.ENEMYDECK);
-
+ 
         boolean isDrawingPhase = !javacideMain.deckLocked; 
         boolean inPreRound = javacideMain.playerPreRound; 
         boolean isPreRoundOver = javacideMain.deckLocked && !javacideMain.playerPreRound;
-
+ 
         if (isEnemyCard) {
             String typeName = "Enemy Card";
             if (isBossCard) {
@@ -45,11 +45,35 @@ public class Panel {
             }
             
             fightBareDamage = javacideMain.instance.getEnemyDamage(targetCard);
-            
+ 
             String enemyText = typeName + "\nDamage: " + fightBareDamage;
-            String bareText = isDrawingPhase ? "[RED]DRAW CARDS FIRST[]" : (inPreRound ? "[RED]IN PRE-ROUND[]" : "Fight Bare");
-            
+ 
+            String bareText;
+            boolean bareClickable;
+            if (isDrawingPhase) {
+                bareText      = "[RED]DRAW CARDS FIRST[]";
+                bareClickable = false;
+            } else if (inPreRound) {
+                bareText      = "[RED]IN PRE-ROUND[]";
+                bareClickable = false;
+            } else {
+                bareText      = "Fight Bare";
+                bareClickable = true;
+            }
+ 
             if (isBossCard) {
+                // Clubs remaining guard only applies to true boss cards in enemyTable.
+                boolean clubsRemaining = false;
+                for (Card c : javacideMain.instance.playerDeck.getCards()) {
+                    if (c.containedBy == javacideMain.instance.playerClubsTable) {
+                        clubsRemaining = true;
+                        break;
+                    }
+                }
+                if (clubsRemaining) {
+                    bareText      = "[RED]CLUBS REMAINING[]";
+                    bareClickable = false;
+                }
                 int suitBonus = 0;
                 switch (targetCard.getSuit()) {
                     case DIAMONDS: suitBonus = 10; break;
@@ -59,12 +83,12 @@ public class Panel {
                     default: break;
                 }
                 String bonusText = "[BLUE](+" + suitBonus + " Bonus)[]";
-                
+ 
                 buttonTexts = new String[] { enemyText, bonusText, bareText };
-                clickables = new boolean[] { false, false, !isDrawingPhase && !inPreRound };
+                clickables  = new boolean[] { false, false, bareClickable };
             } else {
                 buttonTexts = new String[] { enemyText, bareText };
-                clickables = new boolean[] { false, !isDrawingPhase && !inPreRound };
+                clickables  = new boolean[] { false, bareClickable };
             }
             
         } else if (value == 1 && targetCard.getSuit() != Card.CardSuit.CLUBS) {
@@ -78,7 +102,7 @@ public class Panel {
                 buttonTexts = new String[] { "Increase deck size by 1" };
                 clickables = new boolean[] { inPreRound && javacideMain.tableMaxCards < 9 };
             }
-
+ 
         } else {
             switch(targetCard.getSuit()) {
                 case SPADES:
@@ -92,7 +116,7 @@ public class Panel {
                     
                     String drawText;
                     boolean drawAllowed;
-
+ 
                     if (isDrawingPhase) {
                         drawText = "[RED]DRAW CARDS FIRST[]";
                         drawAllowed = false;
@@ -135,10 +159,10 @@ public class Panel {
                     break;
             }
         }
-
+ 
         int numButtons = buttonTexts.length;
         this.subButtons = new Button[numButtons];
-
+ 
         float padding = 10f;
         float btnWidth = width - (padding * 2);
         
@@ -146,7 +170,7 @@ public class Panel {
         
         float slotHeight = (height - (padding * (maxSlots + 1))) / maxSlots;
         float btnHeight = slotHeight - 6f; 
-
+ 
         for (int i = 0; i < numButtons; i++) {
             float btnX = x + padding;
             float slotY = y + height - padding - (slotHeight * (i + 1)) - (padding * i);
@@ -156,28 +180,28 @@ public class Panel {
             subButtons[i].setClickable(clickables[i]);
         }
     }
-
+ 
     public Card getTargetCard() {
         return targetCard;
     }
-
+ 
     public boolean isHovered() {
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         javacideMain.viewport.unproject(mouse);
         return bounds.contains(mouse.x, mouse.y);
     }
-
+ 
     public void render(SpriteBatch batch) {
         for (int i = 0; i < subButtons.length; i++) {
             Button b = subButtons[i];
             b.render(batch);
-
+ 
             if (b.isClicked()) {
                 handleAction(i);
             }
         }
     }
-
+ 
     private void handleAction(int buttonIndex) {
         if (targetCard.getValue() == 1 && targetCard.getSuit() != Card.CardSuit.CLUBS) {
             if (buttonIndex == 0) {
@@ -188,11 +212,11 @@ public class Panel {
             }
             return;
         }
-
+ 
         boolean isEnemyCard = (targetCard.getParentDeck() != null && targetCard.getParentDeck().getDeckType() == Deck.DeckType.ENEMYDECK) ||
                               (targetCard.containedBy != null && targetCard.containedBy.tableType == Table.TableType.ENEMYTABLE) ||
                               (targetCard.containedBy != null && targetCard.containedBy == javacideMain.instance.playerClubsTable);
-
+ 
         if (isEnemyCard) {
             boolean isBossCard = (targetCard.containedBy != null && targetCard.containedBy.tableType == Table.TableType.ENEMYTABLE) || 
                                  (targetCard.getParentDeck() != null && targetCard.getParentDeck().getDeckType() == Deck.DeckType.ENEMYDECK);
@@ -214,7 +238,7 @@ public class Panel {
             }
             return;
         }
-
+ 
         switch(targetCard.getSuit()) {
             case SPADES:
                 if (buttonIndex == 0) {
@@ -258,7 +282,7 @@ public class Panel {
         javacideMain.activePanel.dispose();
         javacideMain.activePanel = null;
     }
-
+ 
     public void dispose() {
         for (Button b : subButtons) {
             b.dispose();
