@@ -43,36 +43,32 @@ public class Deck {
 			this.deckSize  = 59;
 		} else {
 			this.clickable = false;
-			this.deckSize  = 12;
+			this.deckSize  = 52;
 		}
 	}
  
-	public Deck(DeckType deckType, int x, int y, int deckSize, boolean clickable, Texture texture) {
-		this.deckType  = deckType;
-		this.x         = x;
-		this.y         = y;
-		this.deckSize  = deckSize;
-		this.clickable = clickable;
-		this.texture   = texture;
-	}
+	public DeckType getDeckType() { return deckType; }
+	public int getX() { return x; }
+	public int getY() { return y; }
+	public int getHandSize() { return deckCards.size(); }
+	public List<Card> getCards() { return deckCards; }
  
-	public DeckType getDeckType() { return this.deckType; }
-	public int getX() { return this.x; }
-	public int getY() { return this.y; }
- 
-	public List<Card> getCards() {
-		return new ArrayList<>(deckCards);
-	}
- 
-	public void spawnCard(int x, int y) {
-		Card newCard = new Card(this, x, y, javacideMain.deckTexture);
+	public void spawnCard(float startX, float startY) {
+		Card newCard = new Card(this, (int)startX, (int)startY, texture);
 		deckCards.add(newCard);
 	}
  
 	public void moveToFront(Card card) {
-		if (deckCards.contains(card)) {
-			pendingFront = card;
+		pendingFront = card;
+	}
+ 
+	public void removeCard(Card card) {
+		deckCards.remove(card);
+		if (card.containedBy != null) {
+			card.containedBy.removeCard(card);
+			card.containedBy = null;
 		}
+		card.dispose();
 	}
  
 	private void handleClick() {
@@ -92,33 +88,38 @@ public class Deck {
  
 		if (!hit) return;
  
-		if (deckCards.size() >= javacideMain.tableMaxCards) return;
- 
-		spawnCard(x, y);
+		if (this.deckType == DeckType.PLAYERDECK) {
+		    if (javacideMain.deckLocked) return;
+		    
+		    // FIX: Tie manual clicking strictly to the allowed draws phase limit
+		    if (javacideMain.instance.cardsDrawnThisPhase >= javacideMain.instance.allowedDrawsThisPhase) return;
+		    
+		    spawnCard(x, y);
+		    javacideMain.instance.cardsDrawnThisPhase++;
+		} else {
+		    if (deckCards.size() >= javacideMain.tableMaxCards) return;
+		    spawnCard(x, y);
+		}
 	}
  
 	public void render(SpriteBatch batch) {
+		handleClick();
+ 
+		batch.draw(texture, x, y, javacideMain.deckX, javacideMain.deckY);
+ 
 		if (pendingFront != null) {
 			deckCards.remove(pendingFront);
 			deckCards.add(pendingFront);
 			pendingFront = null;
 		}
  
-		Card.resetClickClaim();
-		handleClick();
- 
-		batch.draw(texture, x, y, javacideMain.deckX, javacideMain.deckY);
- 
-		List<Card> snapshot = new ArrayList<>(deckCards);
-		for (Card c : snapshot) {
+		for (Card c : deckCards) {
 			c.render(batch);
 		}
 	}
  
 	public void dispose() {
-		texture.dispose();
-		for (Card c : deckCards) {
-			c.dispose();
-		}
+		for (Card c : deckCards) c.dispose();
+		deckCards.clear();
 	}
 }

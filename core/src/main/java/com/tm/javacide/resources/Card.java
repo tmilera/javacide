@@ -30,15 +30,19 @@ public class Card {
 	private static boolean clickClaimedThisFrame = false;
 	public static void resetClickClaim() { clickClaimedThisFrame = false; }
 
-	final int value;
+	int value; 
 	private CardSuit suit;
 	final Deck parentDeck;
 	public Table containedBy = null; 
+	
+	// FIX: Flag to disable collisions and interactions while attacking
+	public boolean isAttacking = false;
 
 	public CardSuit getSuit() { return suit; }
 	public float getX()      { return x; }
 	public float getY()      { return y; }
 	public int getValue()    { return value; }
+	public Deck getParentDeck() { return parentDeck; }
 
 	public void setPosition(float nx, float ny) {
 		this.x = nx;
@@ -59,7 +63,6 @@ public class Card {
 	private static final float LEAN_SENSITIVITY = 0.015f;
 	private static final float SMOOTH_SPEED = 6f;
 
-	// AUTO MOVE VARIABLES
 	private float targetX, targetY;
 	private boolean isAutoMoving = false;
 	private static final float MOVE_SPEED = 5f;
@@ -71,7 +74,14 @@ public class Card {
 		this.suit       = suitValues[ThreadLocalRandom.current().nextInt(0, 4)];
 		this.value      = (parentDeck.getDeckType() == DeckType.PLAYERDECK) 
 					      ? ThreadLocalRandom.current().nextInt(1, 11) 
-					      : ThreadLocalRandom.current().nextInt(1, 4);
+					      : ThreadLocalRandom.current().nextInt(11, 14);
+
+		if (parentDeck.getDeckType() == DeckType.PLAYERDECK && javacideMain.tableMaxCards >= 9) {
+			while (this.value == 1 && this.suit != CardSuit.CLUBS) {
+				this.suit  = suitValues[ThreadLocalRandom.current().nextInt(0, 4)];
+				this.value = ThreadLocalRandom.current().nextInt(1, 11);
+			}
+		}
 
 		this.clickable  = true;
 		this.draggable  = true;
@@ -115,8 +125,8 @@ public class Card {
 		boolean rightJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT);
 		boolean holding     = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
 
-		// RIGHT CLICK PANEL LOGIC - 'interactable' check removed so non-draggable cards can be inspected
-		if (rightJustPressed && contains(mouse.x, mouse.y) && containedBy != null) {
+		// Prevent clicking/interacting while attacking
+		if (rightJustPressed && contains(mouse.x, mouse.y) && containedBy != null && !isAttacking) {
 			if (javacideMain.activePanel != null && javacideMain.activePanel.getTargetCard() == this) {
 				javacideMain.activePanel.dispose();
 				javacideMain.activePanel = null;
@@ -133,8 +143,7 @@ public class Card {
 			}
 		}
 
-		// LEFT CLICK DRAG LOGIC - 'interactable' check remains here to prevent dragging non-interactable cards
-		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y)) {
+		if (interactable && justPressed && !clickClaimedThisFrame && clickable && draggable && contains(mouse.x, mouse.y) && !isAttacking) {
 			clickClaimedThisFrame = true;
 			dragging = true;
 			isAutoMoving = false; 
@@ -182,6 +191,9 @@ public class Card {
 	}
 
 	private void resolveCollisions() {
+		// FIX: Bypass all collision and containment logic while attacking
+		if (isAttacking) return;
+
 		float screenW = javacideMain.WORLD_WIDTH, screenH = javacideMain.WORLD_HEIGHT;
 
 		if (x < 0) { x = 0; velocityX = 0; }
@@ -249,7 +261,7 @@ public class Card {
 
 		if (this.suit == CardSuit.NONE && javacideMain.font != null) {
 			float textPaddingX = 30f;
-			float textPaddingY = 50f;
+			float textPaddingY = 30f;
 			
 			float baseScale = (width / 100f) * 0.7f; 
 			javacideMain.font.getData().setScale(baseScale);
@@ -261,6 +273,9 @@ public class Card {
 			javacideMain.font.draw(batch, "Health: " + javacideMain.playerHealth, x + textPaddingX, y + height - textPaddingY - lineSpacing);
 			javacideMain.font.draw(batch, "Score: " + javacideMain.playerScore, x + textPaddingX, y + height - textPaddingY - (lineSpacing * 2));
 			javacideMain.font.draw(batch, "Round: " + javacideMain.playerCurrentRound, x + textPaddingX, y + height - textPaddingY - (lineSpacing * 3));
+            
+            String preRoundText = javacideMain.playerPreRound ? "Yes" : "No";
+            javacideMain.font.draw(batch, "Pre-Round: " + preRoundText, x + textPaddingX, y + height - textPaddingY - (lineSpacing * 4));
 		}
 	}
 

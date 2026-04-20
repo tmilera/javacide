@@ -28,8 +28,6 @@ public class Table {
 	private final Texture texture;
 
 	private final ArrayList<Card> capturedCards = new ArrayList<>();
-	private final ArrayList<Card> pendingCapture = new ArrayList<>();
-	private final ArrayList<Card> pendingRelease = new ArrayList<>();
 
 	public Table(TableType tableType, CardSuit restrictedSuit, boolean isExclusionary, float x, float y, Texture texture) {
 		this.tableType      = tableType;
@@ -42,47 +40,31 @@ public class Table {
 		this.texture        = texture;
 		this.bounds         = new Rectangle(x, y, width, height);
 
-		Card.registerContainer(this);
 		allTables.add(this);
+		Card.registerContainer(this);
 	}
 
 	public void setInteractable(boolean val) { this.isInteractable = val; }
-	public void setOrganized(boolean val)    { this.isOrganized = val; }
 	public boolean isInteractable()          { return isInteractable; }
-	
+
+	public void setOrganized(boolean val) { this.isOrganized = val; }
+	public Rectangle getBounds()          { return bounds; }
 	public float getX() { return x; }
 	public float getY() { return y; }
 
-	public Rectangle getBounds()    { return bounds; }
-	public int getRemainingSpace() { return Math.max(0, javacideMain.tableMaxCards - capturedCards.size()); }
+	public void removeCard(Card card) {
+		capturedCards.remove(card);
+	}
 
 	public void update(List<Card> allCards) {
-		pendingCapture.clear();
-		pendingRelease.clear();
-
-		for (Card card : allCards) {
-			if (card.containedBy == this) continue;
-			if (card.containedBy != null) continue;
-			
-			// FIX: Do not scoop up the card while it is flying. 
-			// Wait for it to arrive and stop moving first.
-			if (card.isAutoMoving()) continue;
-
-			if (cardOverlaps(card) && isSuitAllowed(card.getSuit())
-					&& (capturedCards.size() + pendingCapture.size()) < javacideMain.tableMaxCards) {
-				pendingCapture.add(card);
-				card.containedBy = this; 
+		for (Card c : allCards) {
+			if (cardOverlaps(c) && !capturedCards.contains(c) && isSuitAllowed(c.getSuit())) {
+				capturedCards.add(c);
+				c.containedBy = this;
+			} else if (!cardOverlaps(c) && capturedCards.contains(c)) {
+				capturedCards.remove(c);
+				if (c.containedBy == this) c.containedBy = null;
 			}
-		}
-		for (Card card : capturedCards) {
-			if (!cardOverlaps(card)) pendingRelease.add(card);
-		}
-		for (Card card : pendingCapture) {
-			capturedCards.add(card);
-		}
-		for (Card card : pendingRelease) {
-			capturedCards.remove(card);
-			card.containedBy = null;
 		}
 
 		if (isOrganized && !capturedCards.isEmpty()) {
@@ -96,7 +78,8 @@ public class Table {
 
 			for (int i = 0; i < capturedCards.size(); i++) {
 				Card c = capturedCards.get(i);
-				c.setPosition(startX + i * (cardW + spacing), centeredY);
+				// FIX: Use setAutoTarget instead of setPosition so they lerp smoothly inside the table!
+				c.setAutoTarget(startX + i * (cardW + spacing), centeredY);
 			}
 		}
 	}
@@ -117,18 +100,16 @@ public class Table {
 		batch.setColor(Color.WHITE);
 		
 		float thickness = 5f;
-		batch.draw(texture, x, y, width, thickness);
-		batch.draw(texture, x, y + height - thickness, width, thickness);
-		batch.draw(texture, x, y, thickness, height);
-		batch.draw(texture, x + width - thickness, y, thickness, height);
-		
+		batch.draw(texture, x, y, width, thickness); 
+		batch.draw(texture, x, y + height - thickness, width, thickness); 
+		batch.draw(texture, x, y, thickness, height); 
+		batch.draw(texture, x + width - thickness, y, thickness, height); 
+
 		batch.setColor(oldColor);
 	}
 
 	public void dispose() {
-		for (Card card : capturedCards) card.containedBy = null;
-		capturedCards.clear();
-		Card.unregisterContainer(this);
 		allTables.remove(this);
+		Card.unregisterContainer(this);
 	}
 }
