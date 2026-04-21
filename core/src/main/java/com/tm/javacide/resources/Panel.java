@@ -9,7 +9,7 @@ import com.tm.javacide.javacideMain;
 public class Panel {
  
     private Card targetCard;
-    private float x, y, width, height;
+    private float x, y, width, height; // remnant of previous idea also too lazy to rewrite
     private Rectangle bounds;
     private Button[] subButtons;
     private int customDrawAmount = 0; 

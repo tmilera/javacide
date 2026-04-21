@@ -13,7 +13,7 @@ import com.tm.javacide.javacideMain;
 
 public class Button {
 
-    public enum ButtonType { BUTTON, PANEL }
+    public enum ButtonType { BUTTON, PANEL } // panel enum virtually useless but too lazy to rewrite
 
     private ButtonType type;
     private float x, y, width, height;

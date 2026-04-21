@@ -1,5 +1,5 @@
 package com.tm.javacide;
- 
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -33,6 +33,7 @@ public class javacideMain extends ApplicationAdapter {
  
 	public static javacideMain instance; 
 
+	// player
 	public static int tableMaxCards = 5;
 	public static int playerHealth = 50;
 	public static int playerScore = 0;
@@ -47,6 +48,7 @@ public class javacideMain extends ApplicationAdapter {
 	public int allowedDrawsThisPhase = 0;
 	public int cardsDrawnThisPhase = 0;
 
+	// defaults
 	public static final int WORLD_WIDTH  = 1920;
 	public static final int WORLD_HEIGHT = 1080;
  
@@ -61,32 +63,30 @@ public class javacideMain extends ApplicationAdapter {
  
 	public static int tableX = 760;
 	public static int tableY = 220;
- 
-	public static Texture deckTexture;
-	public static Texture enemyDeckTexture;
-	public static Texture tableTexture;
-	public static Texture infoTexture;
-	public static Texture buttonTexture;
-	public static Texture panelTexture; 
-	public static Texture backgroundTexture;
-	public static BitmapFont font; 
- 
-	public static OrthographicCamera camera;
-	public static Viewport viewport;
- 
-	private SpriteBatch batch;
-	private ShapeRenderer shapeRenderer;
- 
+	
 	private static final int TABLE_GAP = 40;  
 	private static final int DECK_GAP  = 40;  
  
+	// textures
+	public static Texture deckTexture, enemyDeckTexture, tableTexture, infoTexture, buttonTexture, panelTexture, backgroundTexture;;
+	public static BitmapFont font; 
+ 
+	// cameras
+	public static OrthographicCamera camera;
+	public static Viewport viewport;
+ 
+	// sprite renderers
+	private SpriteBatch batch;
+	private ShapeRenderer shapeRenderer;
+ 
+	// objects
 	public Table playerTable;       
 	public Table playerClubsTable;  
 	public Table enemyTable;        
  
 	public Deck playerDeck;         
 	public Deck enemyDeck;          
-	public static Card info; 
+	public static Card info;  // info object, displays info
 	private Button autoDrawButton;
 	private Button endPreRoundButton; 
 	private Button restartButton; 
@@ -97,7 +97,7 @@ public class javacideMain extends ApplicationAdapter {
 	public static Card targetClubCard = null;
 	public static boolean isAttackAnimating = false;
 	public static boolean justStartedAttack = false; 
-	private Map<Card, Float> clubHoverTimers = new HashMap<>();
+	private Map<Card, Float> clubHoverTimers = new HashMap<>(); // async 
  
 	@Override
 	public void create() {
@@ -120,19 +120,20 @@ public class javacideMain extends ApplicationAdapter {
 		panelTexture = new Texture("cards/card-blank.png"); 
 		backgroundTexture = new Texture("back.png");
 
+		//font defaults
 		font = new BitmapFont();
 		font.getData().markupEnabled = true;
 		font.setColor(Color.WHITE);
 		font.getData().setScale(0.8f);
  
-		// FIX: Initialize the static info card once at boot so its texture isn't tied to game restarts
+		// initialize the static info card once at boot so its texture isn't tied to game restarts
 		info = new Card(50, 50, infoX, infoY, infoTexture, CardSuit.NONE);
 
 		initGame();
 	}
 
 	public void initGame() {
-		// FIX: Explicitly reset all player variables to their base defaults
+		// reset player variables for every restart
 		tableMaxCards = 5;
 		playerHealth = 50;
 		playerScore = 0;
@@ -223,7 +224,7 @@ public class javacideMain extends ApplicationAdapter {
 
 	public void nextRound() {
 		playerCurrentRound++;
-		playerScore += 10;
+		playerScore += 10; // 10 score for each win against a face ad infinitum
 		hasDrawnThisRound = false;
 		hasHealedThisTurn = false; 
 		
@@ -241,7 +242,7 @@ public class javacideMain extends ApplicationAdapter {
 		spawnEnemyCard();
 	}
 
-	public int getCardsInHand() {
+	public int getCardsInHand() { // get cards i/hand
 		int count = 0;
 		for (Card c : playerDeck.getCards()) {
 			if (c.getSuit() != CardSuit.CLUBS) {
@@ -251,7 +252,7 @@ public class javacideMain extends ApplicationAdapter {
 		return count;
 	}
 
-	public int getEnemyDamage(Card card) {
+	public int getEnemyDamage(Card card) { // get enemy hand dmg 
 		if (card.containedBy == playerClubsTable) return card.getValue();
 		
 		int val = card.getValue();
@@ -292,7 +293,7 @@ public class javacideMain extends ApplicationAdapter {
 		}
  
 		batch.begin();
-		// Background — drawn first so it sits below every other object
+		// background drawn first so it sits below every other object
 		if (backgroundTexture != null) {
 			batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 		}
@@ -309,7 +310,7 @@ public class javacideMain extends ApplicationAdapter {
 		endPreRoundButton.setClickable(deckLocked && playerPreRound && !isGameOver);
 		endPreRoundButton.render(batch);
 
-		// info card never disposed and simply renders across runs flawlessly
+		// info card never disposed and simply renders across
 		info.render(batch); 
 
 		if (activePanel != null && !isGameOver) {
@@ -317,7 +318,7 @@ public class javacideMain extends ApplicationAdapter {
 		}
 		batch.end();
 
-		if (isGameOver) {
+		if (isGameOver) { // if you lose
 			Gdx.gl.glEnable(GL20.GL_BLEND);
 			shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 			shapeRenderer.setColor(0, 0, 0, 0.75f);
@@ -325,7 +326,7 @@ public class javacideMain extends ApplicationAdapter {
 			shapeRenderer.end();
 			Gdx.gl.glDisable(GL20.GL_BLEND);
 
-			batch.begin();
+			batch.begin(); 
 			float origScaleX = font.getData().scaleX;
 			float origScaleY = font.getData().scaleY;
 			font.getData().setScale(3.0f);
@@ -340,7 +341,7 @@ public class javacideMain extends ApplicationAdapter {
 			restartButton.render(batch);
 			batch.end();
 
-			if (restartButton.isClicked()) {
+			if (restartButton.isClicked()) { // resets and replaces all cards/rids card arrays
 				initGame();
 			}
 
@@ -381,6 +382,8 @@ public class javacideMain extends ApplicationAdapter {
 	}
 
 	private void handleTargetingLogic() {
+		//targeting card atop other card for attacking animation
+		// very slick
 		if (isAttackAnimating) {
 			float dx = attackingCard.getX() - targetClubCard.getX();
 			float dy = attackingCard.getY() - targetClubCard.getY();
@@ -462,7 +465,7 @@ public class javacideMain extends ApplicationAdapter {
 		shapeRenderer.end();
 		Gdx.gl.glDisable(GL20.GL_BLEND);
 
-		if (clickedValidTarget) {
+		if (clickedValidTarget) { // if the card is not an empty space OR is not face (whilst clubs exist)
 			isAttackAnimating = true;
 			attackingCard.containedBy = null;
 			attackingCard.isAttacking = true; 
@@ -510,7 +513,7 @@ public class javacideMain extends ApplicationAdapter {
 		assignFloatingCards();
 	}
 
-	private void assignFloatingCards() {
+	private void assignFloatingCards() { // assigns order
 		List<Card> cards = playerDeck.getCards();
 		for (Card card : cards) {
 			if (card.containedBy != null) continue;
@@ -536,7 +539,7 @@ public class javacideMain extends ApplicationAdapter {
 	}
  
 	@Override
-	public void dispose() {
+	public void dispose() { // rid
 		batch.dispose();
 		shapeRenderer.dispose();
 		if (playerTable != null) playerTable.dispose();
